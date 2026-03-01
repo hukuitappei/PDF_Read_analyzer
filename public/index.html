@@ -1,0 +1,138 @@
+﻿<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PDF Read Analyzer (TypeScript)</title>
+    <style>
+      :root {
+        --bg: #f5f0e8;
+        --panel: #fffdf8;
+        --text: #20201c;
+        --muted: #686454;
+        --accent: #b85c38;
+        --accent-2: #8a9a5b;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: "Segoe UI", "Yu Gothic UI", sans-serif;
+        color: var(--text);
+        background:
+          radial-gradient(circle at 10% 20%, #f9d8b6 0%, transparent 25%),
+          radial-gradient(circle at 90% 80%, #d9e7c5 0%, transparent 25%),
+          var(--bg);
+      }
+      .container {
+        max-width: 900px;
+        margin: 40px auto;
+        background: var(--panel);
+        border: 1px solid #e4dcca;
+        border-radius: 16px;
+        padding: 24px;
+      }
+      h1 { margin-top: 0; }
+      .row { margin-bottom: 18px; }
+      input[type="file"], input[type="text"], button {
+        width: 100%;
+        padding: 10px 12px;
+        border-radius: 8px;
+        border: 1px solid #cfc7b7;
+        font-size: 16px;
+      }
+      button {
+        background: var(--accent);
+        color: #fff;
+        border: none;
+        cursor: pointer;
+      }
+      button:hover { opacity: 0.92; }
+      .ask-btn { background: var(--accent-2); }
+      .status {
+        font-size: 14px;
+        color: var(--muted);
+        min-height: 20px;
+      }
+      .answer {
+        white-space: pre-wrap;
+        line-height: 1.7;
+        border: 1px solid #e4dcca;
+        border-radius: 12px;
+        padding: 14px;
+        background: #fff;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="container">
+      <h1>PDF Read Analyzer</h1>
+
+      <section class="row">
+        <h2>1) PDF Upload</h2>
+        <input id="pdfFile" type="file" accept="application/pdf" />
+        <button id="uploadBtn">Upload & Index</button>
+      </section>
+
+      <section class="row">
+        <h2>2) Ask</h2>
+        <input id="question" type="text" placeholder="PDFについて質問を入力" />
+        <button id="askBtn" class="ask-btn">Ask</button>
+      </section>
+
+      <p id="status" class="status"></p>
+      <section>
+        <h3>Answer</h3>
+        <div id="answer" class="answer">ここに回答が表示されます。</div>
+      </section>
+    </main>
+
+    <script>
+      const statusEl = document.getElementById("status");
+      const answerEl = document.getElementById("answer");
+
+      document.getElementById("uploadBtn").addEventListener("click", async () => {
+        const fileInput = document.getElementById("pdfFile");
+        if (!fileInput.files || fileInput.files.length === 0) {
+          statusEl.textContent = "PDFを選択してください。";
+          return;
+        }
+
+        const formData = new FormData();
+        formData.append("pdf", fileInput.files[0]);
+
+        statusEl.textContent = "PDFを処理中...";
+        const res = await fetch("/api/upload", { method: "POST", body: formData });
+        const data = await res.json();
+        statusEl.textContent = res.ok
+          ? `アップロード完了: ${data.filename} (${data.chunks} chunks)`
+          : `エラー: ${data.error}`;
+      });
+
+      document.getElementById("askBtn").addEventListener("click", async () => {
+        const question = document.getElementById("question").value.trim();
+        if (!question) {
+          statusEl.textContent = "質問を入力してください。";
+          return;
+        }
+
+        statusEl.textContent = "回答を生成中...";
+        answerEl.textContent = "";
+
+        const res = await fetch("/api/ask", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ question })
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          statusEl.textContent = `エラー: ${data.error}`;
+          return;
+        }
+
+        statusEl.textContent = "完了";
+        answerEl.textContent = String(data.answer);
+      });
+    </script>
+  </body>
+</html>

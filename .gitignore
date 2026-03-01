@@ -1,3 +1,7 @@
+﻿# Node.js
+node_modules/
+dist/
+
 # Python-generated files
 __pycache__/
 *.py[oc]
